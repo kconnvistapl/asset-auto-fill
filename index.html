@@ -1,46 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-  <script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
+<script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
 
-    input {
-      width: 95%;
-      padding: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-  </style>
+  .row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  input {
+    flex: 1;
+    padding: 9px;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  button {
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background: #1976d2;
+    color: white;
+    border: 0;
+    border-radius: 4px;
+  }
+
+  #status {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+</style>
 </head>
 
 <body>
 
-<input
-  id="assetSearch"
-  list="assetList"
-  placeholder="Start typing asset name"
->
+<div class="row">
+  <input
+    id="assetSearch"
+    list="assetList"
+    placeholder="Start typing asset name"
+  >
+
+  <button id="fillButton" type="button">
+    Auto Fill
+  </button>
+</div>
 
 <datalist id="assetList"></datalist>
+
+<div id="status"></div>
 
 <script>
 
 const API =
-  "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
+"https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
 let assets = [];
 
-
-/* --------------------------
-   JSONP CALL
--------------------------- */
 
 function jsonp(params, callback) {
 
@@ -55,18 +80,14 @@ function jsonp(params, callback) {
 }
 
 
-/* --------------------------
-   LOAD ASSET LIST
--------------------------- */
-
 window.assetListCallback = function(list) {
 
   assets = list || [];
 
-  const dataList =
+  const dl =
     document.getElementById("assetList");
 
-  dataList.innerHTML = "";
+  dl.innerHTML = "";
 
   assets.forEach(function(item) {
 
@@ -75,55 +96,64 @@ window.assetListCallback = function(list) {
 
     option.value = item;
 
-    dataList.appendChild(option);
+    dl.appendChild(option);
   });
 };
 
 
-/* --------------------------
-   FILL WORK ORDER
--------------------------- */
-
 window.assetDetailsCallback = function(asset) {
 
-  if (!asset) return;
+  const status =
+    document.getElementById("status");
 
-  JFCustomWidget.setFieldsValueById([
+  if (!asset) {
+    status.textContent = "Asset not found.";
+    return;
+  }
+
+  JFCustomWidget.setFieldsValueByLabel([
+
     {
-      id: "25",
+      label: "Asset ID",
       value: asset.assetId || ""
     },
+
     {
-      id: "27",
+      label: "Asset Name",
       value: asset.assetName || ""
     },
+
     {
-      id: "11",
+      label: "Site",
       value: asset.site || ""
     },
+
     {
-      id: "20",
+      label: "Department",
       value: asset.department || ""
     },
+
     {
-      id: "8",
+      label: "Description of Work Needed",
       value: asset.description || ""
     },
+
     {
-      id: "37",
+      label: "Serial Number",
       value: asset.serialNumber || ""
     },
+
     {
-      id: "39",
+      label: "Model Number",
       value: asset.modelNumber || ""
     }
+
   ]);
+
+  status.textContent =
+    "Asset information filled.";
 };
 
-
-/* --------------------------
-   JOTFORM READY
--------------------------- */
 
 JFCustomWidget.subscribe(
   "ready",
@@ -134,44 +164,79 @@ JFCustomWidget.subscribe(
       "assetListCallback"
     );
 
-    const search =
-      document.getElementById("assetSearch");
+
+    document
+      .getElementById("fillButton")
+      .addEventListener(
+        "click",
+        function() {
+
+          const search =
+            document.getElementById("assetSearch");
+
+          const entered =
+            search.value.trim();
+
+          if (!entered) return;
 
 
-    /* ----------------------
-       ASSET SELECTED
-    ---------------------- */
-
-    search.addEventListener(
-      "input",
-      function() {
-
-        const entered =
-          search.value.trim().toLowerCase();
-
-        const selected =
-          assets.find(function(item) {
-            return (
-              item.toLowerCase() === entered
-            );
-          });
-
-        if (!selected) return;
-
-        jsonp(
-          {
-            action: "assetDetails",
-            asset: selected
-          },
-          "assetDetailsCallback"
-        );
-      }
-    );
+          let selected =
+            assets.find(function(item) {
+              return (
+                item.toLowerCase() ===
+                entered.toLowerCase()
+              );
+            });
 
 
-    /* ----------------------
-       FORM SUBMIT
-    ---------------------- */
+          if (!selected) {
+
+            const matches =
+              assets.filter(function(item) {
+
+                return item
+                  .toLowerCase()
+                  .includes(
+                    entered.toLowerCase()
+                  );
+              });
+
+
+            if (matches.length === 1) {
+              selected = matches[0];
+              search.value = selected;
+            }
+          }
+
+
+          if (!selected) {
+
+            document.getElementById(
+              "status"
+            ).textContent =
+              "Select an asset from the list.";
+
+            return;
+          }
+
+
+          document.getElementById(
+            "status"
+          ).textContent =
+            "Loading asset...";
+
+
+          jsonp(
+            {
+              action: "assetDetails",
+              asset: selected
+            },
+            "assetDetailsCallback"
+          );
+
+        }
+      );
+
 
     JFCustomWidget.subscribe(
       "submit",
@@ -179,8 +244,12 @@ JFCustomWidget.subscribe(
 
         JFCustomWidget.sendSubmit({
           valid: true,
-          value: search.value || ""
+          value:
+            document.getElementById(
+              "assetSearch"
+            ).value || ""
         });
+
       }
     );
 
