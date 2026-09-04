@@ -38,6 +38,40 @@
     font-size: 12px;
     margin-top: 4px;
   }
+
+  #checklistSection {
+    margin-top: 14px;
+  }
+
+  .checklist-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .checklist-item {
+    padding: 9px 0;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .checklist-task {
+    margin-bottom: 6px;
+  }
+
+  .checklist-options {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .checklist-options label {
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .checklist-options input {
+    width: auto;
+    margin-right: 4px;
+  }
 </style>
 </head>
 
@@ -58,6 +92,7 @@
 <datalist id="assetList"></datalist>
 
 <div id="status"></div>
+<div id="checklistSection"></div>
 <div id="assetPreview"></div>
 
 <script>
@@ -66,6 +101,8 @@ const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
 let assets = [];
+let currentChecklistTasks = [];
+
 
 function jsonp(params, callback) {
   const script = document.createElement("script");
@@ -78,17 +115,178 @@ function jsonp(params, callback) {
   document.body.appendChild(script);
 }
 
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+function saveChecklistResults() {
+
+  if (!currentChecklistTasks.length) {
+    JFCustomWidget.setFieldsValueByLabel([
+      {
+        label: "PM Checklist Results",
+        value: ""
+      }
+    ]);
+
+    return;
+  }
+
+  const lines =
+    currentChecklistTasks.map(
+      function(task, index) {
+
+        const selected =
+          document.querySelector(
+            'input[name="checklist_' +
+            index +
+            '"]:checked'
+          );
+
+        const result =
+          selected
+            ? selected.value
+            : "NOT ANSWERED";
+
+        return (
+          result +
+          " - " +
+          task
+        );
+      }
+    );
+
+  JFCustomWidget.setFieldsValueByLabel([
+    {
+      label: "PM Checklist Results",
+      value: lines.join("\n")
+    }
+  ]);
+}
+
+
+function renderChecklist(asset) {
+
+  const section =
+    document.getElementById(
+      "checklistSection"
+    );
+
+  const source =
+    (asset.pmChecklist || "").trim();
+
+  let tasks =
+    source
+      ? source.split(/\r?\n/)
+      : [
+          asset.description ||
+          asset.assetName ||
+          "PM Task"
+        ];
+
+  tasks =
+    tasks
+      .map(function(item) {
+        return item.trim();
+      })
+      .filter(Boolean);
+
+  currentChecklistTasks = tasks;
+
+  if (!tasks.length) {
+    section.innerHTML = "";
+    saveChecklistResults();
+    return;
+  }
+
+  let html =
+    '<div class="checklist-title">' +
+    'PM Checklist' +
+    '</div>';
+
+  tasks.forEach(
+    function(task, index) {
+
+      html +=
+        '<div class="checklist-item">' +
+
+          '<div class="checklist-task">' +
+            escapeHtml(task) +
+          '</div>' +
+
+          '<div class="checklist-options">' +
+
+            '<label>' +
+              '<input type="radio" ' +
+              'name="checklist_' + index + '" ' +
+              'value="PASS">' +
+              'Pass' +
+            '</label>' +
+
+            '<label>' +
+              '<input type="radio" ' +
+              'name="checklist_' + index + '" ' +
+              'value="FAIL">' +
+              'Fail' +
+            '</label>' +
+
+            '<label>' +
+              '<input type="radio" ' +
+              'name="checklist_' + index + '" ' +
+              'value="N/A">' +
+              'N/A' +
+            '</label>' +
+
+          '</div>' +
+
+        '</div>';
+    }
+  );
+
+  section.innerHTML = html;
+
+  section
+    .querySelectorAll(
+      'input[type="radio"]'
+    )
+    .forEach(
+      function(input) {
+
+        input.addEventListener(
+          "change",
+          saveChecklistResults
+        );
+      }
+    );
+
+  saveChecklistResults();
+}
+
+
 window.assetListCallback = function(list) {
+
   assets = list || [];
 
   const dl =
-    document.getElementById("assetList");
+    document.getElementById(
+      "assetList"
+    );
 
   dl.innerHTML = "";
 
   assets.forEach(function(item) {
+
     const option =
-      document.createElement("option");
+      document.createElement(
+        "option"
+      );
 
     option.value = item;
 
@@ -96,72 +294,132 @@ window.assetListCallback = function(list) {
   });
 };
 
+
 window.assetDetailsCallback = function(asset) {
+
   const status =
-    document.getElementById("status");
+    document.getElementById(
+      "status"
+    );
 
   const preview =
-    document.getElementById("assetPreview");
+    document.getElementById(
+      "assetPreview"
+    );
 
   if (!asset) {
-    status.textContent = "Asset not found.";
+
+    status.textContent =
+      "Asset not found.";
+
     preview.innerHTML = "";
+
+    document.getElementById(
+      "checklistSection"
+    ).innerHTML = "";
+
+    currentChecklistTasks = [];
+
+    saveChecklistResults();
+
     return;
   }
 
+
   JFCustomWidget.setFieldsValueByLabel([
-    { label: "Asset ID", value: asset.assetId || "" },
-    { label: "Asset Name", value: asset.assetName || "" },
-    { label: "Site", value: asset.site || "" },
-    { label: "Department", value: asset.department || "" },
-    { label: "Description of Work Needed", value: asset.description || "" },
-    { label: "Serial Number", value: asset.serialNumber || "" },
-    { label: "Model Number", value: asset.modelNumber || "" }
+    {
+      label: "Asset ID",
+      value: asset.assetId || ""
+    },
+    {
+      label: "Asset Name",
+      value: asset.assetName || ""
+    },
+    {
+      label: "Site",
+      value: asset.site || ""
+    },
+    {
+      label: "Department",
+      value: asset.department || ""
+    },
+    {
+      label: "Description of Work Needed",
+      value: asset.description || ""
+    },
+    {
+      label: "Serial Number",
+      value: asset.serialNumber || ""
+    },
+    {
+      label: "Model Number",
+      value: asset.modelNumber || ""
+    }
   ]);
+
+
+  renderChecklist(asset);
+
 
   let html = "";
 
+
   if (asset.notes) {
+
     html +=
       `<div style="margin-top:12px;">
         <strong>Asset Notes:</strong><br>
-        ${asset.notes}
+        ${escapeHtml(asset.notes)}
       </div>`;
   }
 
+
   if (asset.photo) {
+
     try {
+
       const photoData =
         JSON.parse(asset.photo);
 
       const records =
         photoData.records || [];
 
-      records.forEach(function(record) {
-        const imageUrl =
-          record.url.indexOf("http") === 0
-            ? record.url
-            : "https://www.jotform.com" + record.url;
+      records.forEach(
+        function(record) {
 
-        html +=
-          `<div style="margin-top:12px;">
-            <img
-              src="${imageUrl}"
-              style="max-width:100%; max-height:220px; border-radius:6px;"
-            >
+          const imageUrl =
+            record.url.indexOf("http") === 0
+              ? record.url
+              : "https://www.jotform.com" +
+                record.url;
 
-            ${
-              record.note
-                ? `<div style="margin-top:5px;">
-                    <strong>Photo Note:</strong>
-                    ${record.note}
-                   </div>`
-                : ""
-            }
-          </div>`;
-      });
+          html +=
+            `<div style="margin-top:12px;">
+
+              <img
+                src="${escapeHtml(imageUrl)}"
+                style="
+                  max-width:100%;
+                  max-height:220px;
+                  border-radius:6px;
+                "
+              >
+
+              ${
+                record.note
+                  ? `<div style="margin-top:5px;">
+                      <strong>Photo Note:</strong>
+                      ${escapeHtml(record.note)}
+                     </div>`
+                  : ""
+              }
+
+            </div>`;
+        }
+      );
 
     } catch (e) {
+
       console.log(
         "Photo could not be displayed",
         e
@@ -169,23 +427,30 @@ window.assetDetailsCallback = function(asset) {
     }
   }
 
+
   preview.innerHTML = html;
 
   status.textContent =
     "Asset information filled.";
 };
 
+
 JFCustomWidget.subscribe(
   "ready",
   function() {
 
     jsonp(
-      { action: "assetList" },
+      {
+        action: "assetList"
+      },
       "assetListCallback"
     );
 
+
     document
-      .getElementById("fillButton")
+      .getElementById(
+        "fillButton"
+      )
       .addEventListener(
         "click",
         function() {
@@ -200,31 +465,48 @@ JFCustomWidget.subscribe(
 
           if (!entered) return;
 
+
           let selected =
-            assets.find(function(item) {
-              return (
-                item.toLowerCase() ===
-                entered.toLowerCase()
-              );
-            });
+            assets.find(
+              function(item) {
+
+                return (
+                  item.toLowerCase() ===
+                  entered.toLowerCase()
+                );
+              }
+            );
+
 
           if (!selected) {
-            const matches =
-              assets.filter(function(item) {
-                return item
-                  .toLowerCase()
-                  .includes(
-                    entered.toLowerCase()
-                  );
-              });
 
-            if (matches.length === 1) {
-              selected = matches[0];
-              search.value = selected;
+            const matches =
+              assets.filter(
+                function(item) {
+
+                  return item
+                    .toLowerCase()
+                    .includes(
+                      entered.toLowerCase()
+                    );
+                }
+              );
+
+            if (
+              matches.length === 1
+            ) {
+
+              selected =
+                matches[0];
+
+              search.value =
+                selected;
             }
           }
 
+
           if (!selected) {
+
             document.getElementById(
               "status"
             ).textContent =
@@ -233,10 +515,25 @@ JFCustomWidget.subscribe(
             return;
           }
 
+
           document.getElementById(
             "status"
           ).textContent =
             "Loading asset...";
+
+
+          document.getElementById(
+            "checklistSection"
+          ).innerHTML = "";
+
+
+          document.getElementById(
+            "assetPreview"
+          ).innerHTML = "";
+
+
+          currentChecklistTasks = [];
+
 
           jsonp(
             {
@@ -248,18 +545,21 @@ JFCustomWidget.subscribe(
         }
       );
 
+
     JFCustomWidget.subscribe(
       "submit",
       function() {
 
+        saveChecklistResults();
+
         JFCustomWidget.sendSubmit({
           valid: true,
+
           value:
             document.getElementById(
               "assetSearch"
             ).value || ""
         });
-
       }
     );
   }
