@@ -1,85 +1,192 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
-<style>
-  body { margin:0; font-family:Arial,sans-serif; }
-  input { width:95%; padding:10px; font-size:16px; box-sizing:border-box; }
-</style>
+  <meta charset="UTF-8">
+
+  <script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+  </style>
 </head>
 
 <body>
 
-<input id="assetSearch" list="assetList" placeholder="Start typing asset name">
+<input
+  id="assetSearch"
+  list="assetList"
+  placeholder="Start typing asset name"
+>
+
 <datalist id="assetList"></datalist>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
+
+const API =
+  "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
 let assets = [];
 
+
+/* --------------------------
+   JSONP CALL
+-------------------------- */
+
 function jsonp(params, callback) {
+
   const script = document.createElement("script");
+
   params.callback = callback;
-  script.src = API + "?" + new URLSearchParams(params);
+
+  script.src =
+    API + "?" + new URLSearchParams(params);
+
   document.body.appendChild(script);
 }
 
+
+/* --------------------------
+   LOAD ASSET LIST
+-------------------------- */
+
 window.assetListCallback = function(list) {
+
   assets = list || [];
 
-  const dl = document.getElementById("assetList");
+  const dataList =
+    document.getElementById("assetList");
 
-  assets.forEach(function(asset) {
-    const option = document.createElement("option");
-    option.value = asset;
-    dl.appendChild(option);
+  dataList.innerHTML = "";
+
+  assets.forEach(function(item) {
+
+    const option =
+      document.createElement("option");
+
+    option.value = item;
+
+    dataList.appendChild(option);
   });
 };
 
+
+/* --------------------------
+   FILL WORK ORDER
+-------------------------- */
+
 window.assetDetailsCallback = function(asset) {
+
   if (!asset) return;
 
-  JFCustomWidget.setFieldsValueByLabel([
-    {label:"Asset ID", value:asset.assetId || ""},
-    {label:"Asset Name", value:asset.assetName || ""},
-    {label:"Site", value:asset.site || ""},
-    {label:"Department", value:asset.department || ""},
-    {label:"Description of Work Needed", value:asset.description || ""},
-    {label:"Serial Number", value:asset.serialNumber || ""},
-    {label:"Model Number", value:asset.modelNumber || ""}
+  JFCustomWidget.setFieldsValueById([
+    {
+      id: "25",
+      value: asset.assetId || ""
+    },
+    {
+      id: "27",
+      value: asset.assetName || ""
+    },
+    {
+      id: "11",
+      value: asset.site || ""
+    },
+    {
+      id: "20",
+      value: asset.department || ""
+    },
+    {
+      id: "8",
+      value: asset.description || ""
+    },
+    {
+      id: "37",
+      value: asset.serialNumber || ""
+    },
+    {
+      id: "39",
+      value: asset.modelNumber || ""
+    }
   ]);
 };
 
-JFCustomWidget.subscribe("ready", function() {
 
-  jsonp({action:"assetList"}, "assetListCallback");
+/* --------------------------
+   JOTFORM READY
+-------------------------- */
 
-  const search = document.getElementById("assetSearch");
+JFCustomWidget.subscribe(
+  "ready",
+  function() {
 
-  search.addEventListener("input", function() {
+    jsonp(
+      { action: "assetList" },
+      "assetListCallback"
+    );
 
-    const selected = assets.find(function(a) {
-      return a.toLowerCase() === search.value.trim().toLowerCase();
-    });
+    const search =
+      document.getElementById("assetSearch");
 
-    if (selected) {
-      jsonp(
-        {action:"assetDetails", asset:selected},
-        "assetDetailsCallback"
-      );
-    }
-  });
 
-  JFCustomWidget.subscribe("submit", function() {
-    JFCustomWidget.sendSubmit({
-      valid:true,
-      value:search.value || ""
-    });
-  });
+    /* ----------------------
+       ASSET SELECTED
+    ---------------------- */
 
-});
+    search.addEventListener(
+      "input",
+      function() {
+
+        const entered =
+          search.value.trim().toLowerCase();
+
+        const selected =
+          assets.find(function(item) {
+            return (
+              item.toLowerCase() === entered
+            );
+          });
+
+        if (!selected) return;
+
+        jsonp(
+          {
+            action: "assetDetails",
+            asset: selected
+          },
+          "assetDetailsCallback"
+        );
+      }
+    );
+
+
+    /* ----------------------
+       FORM SUBMIT
+    ---------------------- */
+
+    JFCustomWidget.subscribe(
+      "submit",
+      function() {
+
+        JFCustomWidget.sendSubmit({
+          valid: true,
+          value: search.value || ""
+        });
+      }
+    );
+
+  }
+);
+
 </script>
 
 </body>
