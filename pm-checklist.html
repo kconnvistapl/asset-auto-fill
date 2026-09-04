@@ -39,6 +39,8 @@ button {
   display: flex;
   gap: 18px;
 }
+
+  
 </style>
 </head>
 
@@ -172,6 +174,7 @@ function renderChecklist(asset) {
 
   if (!asset) {
 
+    
     status.textContent =
       "Asset not found.";
 
@@ -305,8 +308,8 @@ JFCustomWidget.subscribe(
 
 
           JFCustomWidget.getFieldsValueById(
-            ["input_25"],
-            function(data) {
+  ["q25_assetId"],
+  function(data) {
 
               const assetId =
                 getValue(data).trim();
