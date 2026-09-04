@@ -6,69 +6,51 @@
 <script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
 
 <style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-  }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
 
-  #status {
-    font-size: 12px;
-    margin-bottom: 8px;
-  }
+button {
+  padding: 9px 14px;
+  cursor: pointer;
+  background: #1976d2;
+  color: white;
+  border: 0;
+  border-radius: 4px;
+}
 
-  #refreshButton {
-    padding: 7px 12px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    background: #1976d2;
-    color: white;
-    border: 0;
-    border-radius: 4px;
-  }
+#status {
+  margin: 8px 0;
+  font-size: 12px;
+}
 
-  .title {
-    font-weight: bold;
-    font-size: 15px;
-    margin-bottom: 8px;
-  }
+.task {
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+}
 
-  .task {
-    padding: 10px 0;
-    border-bottom: 1px solid #ddd;
-  }
+.taskText {
+  margin-bottom: 7px;
+}
 
-  .task-text {
-    margin-bottom: 7px;
-  }
-
-  .options {
-    display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
-
-  .options label {
-    cursor: pointer;
-  }
-
-  .options input {
-    margin-right: 4px;
-  }
-
-  .fail {
-    font-weight: bold;
-  }
+.options {
+  display: flex;
+  gap: 18px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="status">Loading PM checklist...</div>
-
-<button id="refreshButton" type="button">
-  Refresh Checklist
+<button id="loadButton" type="button">
+  Load PM Checklist
 </button>
+
+<div id="status">
+  Click Load PM Checklist after the asset is selected.
+</div>
 
 <div id="checklist"></div>
 
@@ -77,45 +59,24 @@
 const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
-let currentAssetId = "";
-let currentTasks = [];
-let existingResultsText = "";
-let hasInteraction = false;
+let tasks = [];
 
 
-function jsonp(params, callbackName) {
-  const script =
-    document.createElement("script");
+function jsonp(params, callback) {
+  const script = document.createElement("script");
 
-  params.callback =
-    callbackName;
+  params.callback = callback;
 
   script.src =
-    API + "?" +
-    new URLSearchParams(params);
+    API + "?" + new URLSearchParams(params);
 
   document.body.appendChild(script);
 }
 
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+function getValue(data) {
 
-
-function getReturnedValue(data, qid) {
-
-  if (
-    data === null ||
-    data === undefined
-  ) {
-    return "";
-  }
+  if (!data) return "";
 
   if (
     typeof data === "string" ||
@@ -128,53 +89,27 @@ function getReturnedValue(data, qid) {
 
     if (!data.length) return "";
 
-    return getReturnedValue(
-      data[0],
-      qid
-    );
+    return getValue(data[0]);
   }
 
   if (typeof data === "object") {
 
     if (data.value !== undefined) {
-      return String(
-        data.value || ""
-      );
+      return String(data.value || "");
     }
 
     if (data.answer !== undefined) {
-      return String(
-        data.answer || ""
-      );
+      return String(data.answer || "");
     }
 
-    if (
-      data[qid] !== undefined
-    ) {
-      return getReturnedValue(
-        data[qid],
-        qid
-      );
-    }
+    const keys = Object.keys(data);
 
-    if (
-      data["input_" + qid] !==
-      undefined
-    ) {
-      return getReturnedValue(
-        data["input_" + qid],
-        qid
-      );
-    }
+    for (let i = 0; i < keys.length; i++) {
 
-    const keys =
-      Object.keys(data);
+      const value =
+        getValue(data[keys[i]]);
 
-    if (keys.length === 1) {
-      return getReturnedValue(
-        data[keys[0]],
-        qid
-      );
+      if (value) return value;
     }
   }
 
@@ -182,362 +117,172 @@ function getReturnedValue(data, qid) {
 }
 
 
-function parseExistingResults(text) {
-
-  const results = {};
-
-  String(text || "")
-    .split(/\r?\n/)
-    .forEach(function(line) {
-
-      const match =
-        line.match(
-          /^(PASS|FAIL|N\/A)\s+-\s+(.+)$/i
-        );
-
-      if (match) {
-
-        results[
-          match[2].trim()
-        ] =
-          match[1].toUpperCase();
-      }
-    });
-
-  return results;
-}
-
-
-function buildResultsText() {
-
-  if (!currentTasks.length) {
-    return "";
-  }
-
-  return currentTasks
-    .map(function(task, index) {
-
-      const selected =
-        document.querySelector(
-          'input[name="pm_task_' +
-          index +
-          '"]:checked'
-        );
-
-      const result =
-        selected
-          ? selected.value
-          : "NOT ANSWERED";
-
-      return (
-        result +
-        " - " +
-        task
-      );
-    })
-    .join("\n");
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 
 function saveResults() {
 
-  if (!currentTasks.length) {
-    return;
-  }
+  const results =
+    tasks.map(function(task, index) {
+
+      const selected =
+        document.querySelector(
+          'input[name="task_' +
+          index +
+          '"]:checked'
+        );
+
+      return (
+        (
+          selected
+            ? selected.value
+            : "NOT ANSWERED"
+        ) +
+        " - " +
+        task
+      );
+    });
 
   const value =
-    buildResultsText();
-
-  existingResultsText =
-    value;
+    results.join("\n");
 
   JFCustomWidget.setFieldsValueByLabel([
     {
-      label:
-        "PM Checklist Results",
-      value:
-        value
+      label: "PM Checklist Results",
+      value: value
     }
   ]);
 
-  JFCustomWidget.sendData({
-    value:
-      value
-  });
-}
-
-
-function resizeWidget() {
-
-  const height =
-    Math.max(
-      150,
-      document.body.scrollHeight +
-      20
-    );
-
-  JFCustomWidget.requestFrameResize({
-    height:
-      height
-  });
+  return value;
 }
 
 
 function renderChecklist(asset) {
 
-  const container =
-    document.getElementById(
-      "checklist"
-    );
-
   const status =
-    document.getElementById(
-      "status"
-    );
+    document.getElementById("status");
+
+  const container =
+    document.getElementById("checklist");
 
   if (!asset) {
-
-    currentTasks = [];
-
-    container.innerHTML = "";
 
     status.textContent =
       "Asset not found.";
 
-    resizeWidget();
+    container.innerHTML = "";
 
     return;
   }
 
-
-  const checklistText =
+  const checklist =
     String(
       asset.pmChecklist || ""
     ).trim();
 
+  if (checklist) {
 
-  let tasks =
-    checklistText
-      ? checklistText.split(
-          /\r?\n/
-        )
-      : [
-          asset.description ||
-          asset.assetName ||
-          "PM Task"
-        ];
+    tasks =
+      checklist
+        .split(/\r?\n/)
+        .map(function(task) {
+          return task.trim();
+        })
+        .filter(Boolean);
 
+  } else {
 
-  tasks =
-    tasks
-      .map(function(task) {
-        return task.trim();
-      })
-      .filter(Boolean);
-
-
-  currentTasks =
-    tasks;
-
-
-  const previous =
-    parseExistingResults(
-      existingResultsText
-    );
+    tasks = [
+      asset.description ||
+      asset.assetName ||
+      "PM Task"
+    ];
+  }
 
 
   let html =
-    '<div class="title">' +
-    'PM Checklist' +
-    '</div>';
+    "<strong>PM Checklist</strong>";
 
 
-  tasks.forEach(
-    function(task, index) {
+  tasks.forEach(function(task, index) {
 
-      const prior =
-        previous[task] || "";
+    html +=
+      '<div class="task">' +
 
-      html +=
-        '<div class="task">' +
+        '<div class="taskText">' +
+          escapeHtml(task) +
+        '</div>' +
 
-          '<div class="task-text">' +
-            escapeHtml(task) +
-          '</div>' +
+        '<div class="options">' +
 
-          '<div class="options">' +
+          '<label>' +
+            '<input type="radio" ' +
+            'name="task_' + index + '" ' +
+            'value="PASS"> Pass' +
+          '</label>' +
 
-            '<label>' +
-              '<input type="radio" ' +
-              'name="pm_task_' +
-              index +
-              '" value="PASS"' +
-              (
-                prior === "PASS"
-                  ? ' checked'
-                  : ''
-              ) +
-              '>' +
-              'Pass' +
-            '</label>' +
+          '<label>' +
+            '<input type="radio" ' +
+            'name="task_' + index + '" ' +
+            'value="FAIL"> Fail' +
+          '</label>' +
 
-            '<label class="fail">' +
-              '<input type="radio" ' +
-              'name="pm_task_' +
-              index +
-              '" value="FAIL"' +
-              (
-                prior === "FAIL"
-                  ? ' checked'
-                  : ''
-              ) +
-              '>' +
-              'Fail' +
-            '</label>' +
+          '<label>' +
+            '<input type="radio" ' +
+            'name="task_' + index + '" ' +
+            'value="N/A"> N/A' +
+          '</label>' +
 
-            '<label>' +
-              '<input type="radio" ' +
-              'name="pm_task_' +
-              index +
-              '" value="N/A"' +
-              (
-                prior === "N/A"
-                  ? ' checked'
-                  : ''
-              ) +
-              '>' +
-              'N/A' +
-            '</label>' +
+        '</div>' +
 
-          '</div>' +
-
-        '</div>';
-    }
-  );
+      '</div>';
+  });
 
 
-  container.innerHTML =
-    html;
+  container.innerHTML = html;
 
 
   container
     .querySelectorAll(
       'input[type="radio"]'
     )
-    .forEach(
-      function(input) {
+    .forEach(function(input) {
 
-        input.addEventListener(
-          "change",
-          function() {
-
-            hasInteraction =
-              true;
-
-            saveResults();
-          }
-        );
-      }
-    );
+      input.addEventListener(
+        "change",
+        saveResults
+      );
+    });
 
 
   status.textContent =
     "Asset: " +
     (
       asset.assetName ||
-      currentAssetId
+      ""
     );
 
 
-  resizeWidget();
+  JFCustomWidget.requestFrameResize({
+    height:
+      Math.max(
+        180,
+        document.body.scrollHeight + 20
+      )
+  });
 }
 
 
-window.pmAssetDetailsCallback =
+window.pmDetailsCallback =
 function(asset) {
 
   renderChecklist(asset);
 };
-
-
-function loadChecklist() {
-
-  const status =
-    document.getElementById(
-      "status"
-    );
-
-  const container =
-    document.getElementById(
-      "checklist"
-    );
-
-  status.textContent =
-    "Loading PM checklist...";
-
-  container.innerHTML =
-    "";
-
-  currentTasks =
-    [];
-
-
-  JFCustomWidget.getFieldsValueById(
-    ["input_25"]
-    function(assetData) {
-
-      currentAssetId =
-        getReturnedValue(
-          assetData,
-          "25"
-        ).trim();
-
-
-      JFCustomWidget.getFieldsValueById(
-     ["input_52"],
-        function(resultData) {
-
-          existingResultsText =
-            getReturnedValue(
-              resultData,
-              "52"
-            ).trim();
-
-
-          if (
-            !currentAssetId ||
-            currentAssetId
-              .toLowerCase() ===
-              "not assigned"
-          ) {
-
-            status.textContent =
-              "No asset assigned — no PM checklist.";
-
-            container.innerHTML =
-              "";
-
-            resizeWidget();
-
-            return;
-          }
-
-
-          jsonp(
-            {
-              action:
-                "assetDetails",
-
-              asset:
-                currentAssetId
-            },
-            "pmAssetDetailsCallback"
-          );
-        }
-      );
-    }
-  );
-}
 
 
 JFCustomWidget.subscribe(
@@ -545,42 +290,72 @@ JFCustomWidget.subscribe(
   function() {
 
     document
-      .getElementById(
-        "refreshButton"
-      )
+      .getElementById("loadButton")
       .addEventListener(
         "click",
-        loadChecklist
+        function() {
+
+          const status =
+            document.getElementById(
+              "status"
+            );
+
+          status.textContent =
+            "Reading asset...";
+
+
+          JFCustomWidget.getFieldsValueById(
+            ["25"],
+            function(data) {
+
+              const assetId =
+                getValue(data).trim();
+
+              if (
+                !assetId ||
+                assetId.toLowerCase() ===
+                "not assigned"
+              ) {
+
+                status.textContent =
+                  "No asset assigned.";
+
+                return;
+              }
+
+
+              status.textContent =
+                "Loading checklist...";
+
+
+              jsonp(
+                {
+                  action:
+                    "assetDetails",
+
+                  asset:
+                    assetId
+                },
+                "pmDetailsCallback"
+              );
+            }
+          );
+        }
       );
-
-
-    loadChecklist();
 
 
     JFCustomWidget.subscribe(
       "submit",
       function() {
 
-        let value =
-          existingResultsText ||
-          "";
-
-
-        if (hasInteraction) {
-
-          value =
-            buildResultsText();
-
-          saveResults();
-        }
-
+        const value =
+          tasks.length
+            ? saveResults()
+            : "";
 
         JFCustomWidget.sendSubmit({
-          valid:
-            true,
-
-          value:
-            value
+          valid: true,
+          value: value
         });
       }
     );
