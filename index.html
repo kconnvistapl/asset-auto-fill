@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 
-
 <script src="https://cdn.jotfor.ms/s/umd/latest/for-custom-widgets.js"></script>
 
 <style>
@@ -40,13 +39,20 @@
     margin-top: 4px;
   }
 
-  #checklistSection {
+  #maintenanceDetails {
     margin-top: 14px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 8px 10px;
   }
 
-  .checklist-title {
+  #maintenanceDetails summary {
     font-weight: bold;
-    margin-bottom: 8px;
+    cursor: pointer;
+  }
+
+  #checklistSection {
+    margin-top: 10px;
   }
 
   .checklist-item {
@@ -79,22 +85,43 @@
 <body>
 
 <div class="row">
+
   <input
     id="assetSearch"
     list="assetList"
     placeholder="Start typing asset name"
   >
 
-  <button id="fillButton" type="button">
+  <button
+    id="fillButton"
+    type="button"
+  >
     Auto Fill
   </button>
+
 </div>
 
 <datalist id="assetList"></datalist>
 
 <div id="status"></div>
-<div id="checklistSection"></div>
+
+
+<details
+  id="maintenanceDetails"
+  style="display:none;"
+>
+
+  <summary>
+    Maintenance Use Only — PM Checklist
+  </summary>
+
+  <div id="checklistSection"></div>
+
+</details>
+
+
 <div id="assetPreview"></div>
+
 
 <script>
 
@@ -102,43 +129,65 @@ const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
 let assets = [];
+
 let currentChecklistTasks = [];
+
+let checklistTouched = false;
 
 
 function jsonp(params, callback) {
-  const script = document.createElement("script");
 
-  params.callback = callback;
+  const script =
+    document.createElement("script");
+
+  params.callback =
+    callback;
 
   script.src =
-    API + "?" + new URLSearchParams(params);
+    API +
+    "?" +
+    new URLSearchParams(params);
 
   document.body.appendChild(script);
 }
 
 
 function escapeHtml(value) {
+
   return String(value || "")
+
     .replace(/&/g, "&amp;")
+
     .replace(/</g, "&lt;")
+
     .replace(/>/g, "&gt;")
+
     .replace(/"/g, "&quot;")
+
     .replace(/'/g, "&#039;");
+}
+
+
+function clearChecklistResults() {
+
+  JFCustomWidget.setFieldsValueByLabel([
+    {
+      label:
+        "PM Checklist Results",
+
+      value:
+        ""
+    }
+  ]);
 }
 
 
 function saveChecklistResults() {
 
   if (!currentChecklistTasks.length) {
-    JFCustomWidget.setFieldsValueByLabel([
-      {
-        label: "PM Checklist Results",
-        value: ""
-      }
-    ]);
-
     return;
   }
+
 
   const lines =
     currentChecklistTasks.map(
@@ -151,10 +200,12 @@ function saveChecklistResults() {
             '"]:checked'
           );
 
+
         const result =
           selected
             ? selected.value
             : "NOT ANSWERED";
+
 
         return (
           result +
@@ -164,10 +215,14 @@ function saveChecklistResults() {
       }
     );
 
+
   JFCustomWidget.setFieldsValueByLabel([
     {
-      label: "PM Checklist Results",
-      value: lines.join("\n")
+      label:
+        "PM Checklist Results",
+
+      value:
+        lines.join("\n")
     }
   ]);
 }
@@ -175,13 +230,24 @@ function saveChecklistResults() {
 
 function renderChecklist(asset) {
 
+  const details =
+    document.getElementById(
+      "maintenanceDetails"
+    );
+
+
   const section =
     document.getElementById(
       "checklistSection"
     );
 
+
   const source =
-    (asset.pmChecklist || "").trim();
+    (
+      asset.pmChecklist ||
+      ""
+    ).trim();
+
 
   let tasks =
     source
@@ -192,58 +258,105 @@ function renderChecklist(asset) {
           "PM Task"
         ];
 
+
   tasks =
     tasks
-      .map(function(item) {
-        return item.trim();
-      })
+      .map(
+        function(item) {
+          return item.trim();
+        }
+      )
       .filter(Boolean);
 
-  currentChecklistTasks = tasks;
+
+  currentChecklistTasks =
+    tasks;
+
+
+  checklistTouched =
+    false;
+
+
+  clearChecklistResults();
+
 
   if (!tasks.length) {
-    section.innerHTML = "";
-    saveChecklistResults();
+
+    details.style.display =
+      "none";
+
+    section.innerHTML =
+      "";
+
     return;
   }
 
+
   let html =
-    '<div class="checklist-title">' +
-    'PM Checklist' +
-    '</div>';
+    "";
+
 
   tasks.forEach(
     function(task, index) {
 
       html +=
+
         '<div class="checklist-item">' +
 
           '<div class="checklist-task">' +
+
             escapeHtml(task) +
+
           '</div>' +
+
 
           '<div class="checklist-options">' +
 
+
             '<label>' +
+
               '<input type="radio" ' +
-              'name="checklist_' + index + '" ' +
+
+              'name="checklist_' +
+              index +
+              '" ' +
+
               'value="PASS">' +
+
               'Pass' +
+
             '</label>' +
 
+
             '<label>' +
+
               '<input type="radio" ' +
-              'name="checklist_' + index + '" ' +
+
+              'name="checklist_' +
+              index +
+              '" ' +
+
               'value="FAIL">' +
+
               'Fail' +
+
             '</label>' +
 
+
             '<label>' +
+
               '<input type="radio" ' +
-              'name="checklist_' + index + '" ' +
+
+              'name="checklist_' +
+              index +
+              '" ' +
+
               'value="N/A">' +
+
               'N/A' +
+
             '</label>' +
+
 
           '</div>' +
 
@@ -251,7 +364,18 @@ function renderChecklist(asset) {
     }
   );
 
-  section.innerHTML = html;
+
+  section.innerHTML =
+    html;
+
+
+  details.style.display =
+    "block";
+
+
+  details.open =
+    false;
+
 
   section
     .querySelectorAll(
@@ -262,115 +386,201 @@ function renderChecklist(asset) {
 
         input.addEventListener(
           "change",
-          saveChecklistResults
+          function() {
+
+            checklistTouched =
+              true;
+
+            saveChecklistResults();
+          }
         );
       }
     );
-
-  saveChecklistResults();
 }
 
 
-window.assetListCallback = function(list) {
+window.assetListCallback =
+function(list) {
 
-  assets = list || [];
+  assets =
+    list ||
+    [];
+
 
   const dl =
     document.getElementById(
       "assetList"
     );
 
-  dl.innerHTML = "";
 
-  assets.forEach(function(item) {
+  dl.innerHTML =
+    "";
 
-    const option =
-      document.createElement(
-        "option"
+
+  assets.forEach(
+    function(item) {
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value =
+        item;
+
+      dl.appendChild(
+        option
       );
-
-    option.value = item;
-
-    dl.appendChild(option);
-  });
+    }
+  );
 };
 
 
-window.assetDetailsCallback = function(asset) {
+window.assetDetailsCallback =
+function(asset) {
 
   const status =
     document.getElementById(
       "status"
     );
 
+
   const preview =
     document.getElementById(
       "assetPreview"
     );
+
+
+  const details =
+    document.getElementById(
+      "maintenanceDetails"
+    );
+
 
   if (!asset) {
 
     status.textContent =
       "Asset not found.";
 
-    preview.innerHTML = "";
+
+    preview.innerHTML =
+      "";
+
+
+    details.style.display =
+      "none";
+
 
     document.getElementById(
       "checklistSection"
-    ).innerHTML = "";
+    ).innerHTML =
+      "";
 
-    currentChecklistTasks = [];
 
-    saveChecklistResults();
+    currentChecklistTasks =
+      [];
+
+
+    checklistTouched =
+      false;
+
+
+    clearChecklistResults();
+
 
     return;
   }
 
 
   JFCustomWidget.setFieldsValueByLabel([
+
     {
-      label: "Asset ID",
-      value: asset.assetId || ""
+      label:
+        "Asset ID",
+
+      value:
+        asset.assetId ||
+        ""
     },
+
     {
-      label: "Asset Name",
-      value: asset.assetName || ""
+      label:
+        "Asset Name",
+
+      value:
+        asset.assetName ||
+        ""
     },
+
     {
-      label: "Site",
-      value: asset.site || ""
+      label:
+        "Site",
+
+      value:
+        asset.site ||
+        ""
     },
+
     {
-      label: "Department",
-      value: asset.department || ""
+      label:
+        "Department",
+
+      value:
+        asset.department ||
+        ""
     },
+
     {
-      label: "Description of Work Needed",
-      value: asset.description || ""
+      label:
+        "Description of Work Needed",
+
+      value:
+        asset.description ||
+        ""
     },
+
     {
-      label: "Serial Number",
-      value: asset.serialNumber || ""
+      label:
+        "Serial Number",
+
+      value:
+        asset.serialNumber ||
+        ""
     },
+
     {
-      label: "Model Number",
-      value: asset.modelNumber || ""
+      label:
+        "Model Number",
+
+      value:
+        asset.modelNumber ||
+        ""
     }
+
   ]);
 
 
   renderChecklist(asset);
 
 
-  let html = "";
+  let html =
+    "";
 
 
   if (asset.notes) {
 
     html +=
+
       `<div style="margin-top:12px;">
-        <strong>Asset Notes:</strong><br>
+
+        <strong>
+          Asset Notes:
+        </strong>
+
+        <br>
+
         ${escapeHtml(asset.notes)}
+
       </div>`;
   }
 
@@ -380,21 +590,33 @@ window.assetDetailsCallback = function(asset) {
     try {
 
       const photoData =
-        JSON.parse(asset.photo);
+        JSON.parse(
+          asset.photo
+        );
+
 
       const records =
-        photoData.records || [];
+        photoData.records ||
+        [];
+
 
       records.forEach(
         function(record) {
 
           const imageUrl =
-            record.url.indexOf("http") === 0
+
+            record.url.indexOf(
+              "http"
+            ) === 0
+
               ? record.url
+
               : "https://www.jotform.com" +
                 record.url;
 
+
           html +=
+
             `<div style="margin-top:12px;">
 
               <img
@@ -408,16 +630,24 @@ window.assetDetailsCallback = function(asset) {
 
               ${
                 record.note
+
                   ? `<div style="margin-top:5px;">
-                      <strong>Photo Note:</strong>
+
+                      <strong>
+                        Photo Note:
+                      </strong>
+
                       ${escapeHtml(record.note)}
-                     </div>`
+
+                    </div>`
+
                   : ""
               }
 
             </div>`;
         }
       );
+
 
     } catch (e) {
 
@@ -429,7 +659,9 @@ window.assetDetailsCallback = function(asset) {
   }
 
 
-  preview.innerHTML = html;
+  preview.innerHTML =
+    html;
+
 
   status.textContent =
     "Asset information filled.";
@@ -440,10 +672,13 @@ JFCustomWidget.subscribe(
   "ready",
   function() {
 
+
     jsonp(
       {
-        action: "assetList"
+        action:
+          "assetList"
       },
+
       "assetListCallback"
     );
 
@@ -456,15 +691,20 @@ JFCustomWidget.subscribe(
         "click",
         function() {
 
+
           const search =
             document.getElementById(
               "assetSearch"
             );
 
+
           const entered =
             search.value.trim();
 
-          if (!entered) return;
+
+          if (!entered) {
+            return;
+          }
 
 
           let selected =
@@ -493,12 +733,15 @@ JFCustomWidget.subscribe(
                 }
               );
 
+
             if (
-              matches.length === 1
+              matches.length ===
+              1
             ) {
 
               selected =
                 matches[0];
+
 
               search.value =
                 selected;
@@ -513,6 +756,7 @@ JFCustomWidget.subscribe(
             ).textContent =
               "Select an asset from the list.";
 
+
             return;
           }
 
@@ -524,25 +768,43 @@ JFCustomWidget.subscribe(
 
 
           document.getElementById(
+            "maintenanceDetails"
+          ).style.display =
+            "none";
+
+
+          document.getElementById(
             "checklistSection"
-          ).innerHTML = "";
+          ).innerHTML =
+            "";
 
 
           document.getElementById(
             "assetPreview"
-          ).innerHTML = "";
+          ).innerHTML =
+            "";
 
 
-          currentChecklistTasks = [];
+          currentChecklistTasks =
+            [];
+
+
+          checklistTouched =
+            false;
 
 
           jsonp(
             {
-              action: "assetDetails",
-              asset: selected
+              action:
+                "assetDetails",
+
+              asset:
+                selected
             },
+
             "assetDetailsCallback"
           );
+
         }
       );
 
@@ -551,18 +813,30 @@ JFCustomWidget.subscribe(
       "submit",
       function() {
 
-        saveChecklistResults();
+
+        if (
+          checklistTouched
+        ) {
+
+          saveChecklistResults();
+        }
+
 
         JFCustomWidget.sendSubmit({
-          valid: true,
+
+          valid:
+            true,
 
           value:
             document.getElementById(
               "assetSearch"
-            ).value || ""
+            ).value ||
+            ""
+
         });
       }
     );
+
   }
 );
 
