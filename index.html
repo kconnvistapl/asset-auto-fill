@@ -127,7 +127,17 @@
 const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
-let assets = [];
+function displayAsset(item) {
+  const parts = String(item || "").split(" — ");
+
+  if (parts.length >= 2) {
+    const assetId = parts.shift();
+    const name = parts.join(" — ");
+    return name + " — " + assetId;
+  }
+
+  return item;
+}
 
 let currentChecklistTasks = [];
 
