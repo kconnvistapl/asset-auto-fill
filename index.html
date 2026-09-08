@@ -250,14 +250,14 @@ function renderChecklist(asset) {
     ).trim();
 
 
-  let tasks =
-    source
-      ? source.split(/\r?\n/)
-      : [
-          asset.description ||
-          asset.assetName ||
-          "PM Task"
-        ];
+let tasks =
+  source
+    ? source.split(/\r?\n/)
+    : String(
+        asset.description ||
+        asset.assetName ||
+        "PM Task"
+      ).split(/\r?\n/);
 
 
   tasks =
