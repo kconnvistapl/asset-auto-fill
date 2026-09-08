@@ -133,6 +133,8 @@ let currentChecklistTasks = [];
 
 let checklistTouched = false;
 
+  let isEditMode = false;
+  
 
 function jsonp(params, callback) {
 
@@ -276,7 +278,9 @@ function renderChecklist(asset) {
     false;
 
 
+if (!isEditMode) {
   clearChecklistResults();
+}
 
 
   if (!tasks.length) {
@@ -368,8 +372,8 @@ function renderChecklist(asset) {
     html;
 
 
-  details.style.display =
-    "block";
+details.style.display =
+  isEditMode ? "block" : "none";
 
 
   details.open =
@@ -669,7 +673,25 @@ function(asset) {
 
 JFCustomWidget.subscribe(
   "ready",
-  function() {
+function(data) {
+
+  isEditMode =
+    !!(data && String(data.value || "").trim());
+
+  if (isEditMode) {
+    const savedAsset = String(data.value).trim();
+
+    document.getElementById("assetSearch").value =
+      savedAsset;
+
+    jsonp(
+      {
+        action: "assetDetails",
+        asset: savedAsset
+      },
+      "assetDetailsCallback"
+    );
+  }
 
 
     jsonp(
