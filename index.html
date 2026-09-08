@@ -438,8 +438,8 @@ function(list) {
           "option"
         );
 
-      option.value =
-        item;
+option.value =
+  displayAsset(item);
 
       dl.appendChild(
         option
@@ -738,16 +738,15 @@ function(data) {
           }
 
 
-          let selected =
-            assets.find(
-              function(item) {
-
-                return (
-                  item.toLowerCase() ===
-                  entered.toLowerCase()
-                );
-              }
-            );
+let selected =
+  assets.find(
+    function(item) {
+      return (
+        displayAsset(item).toLowerCase() ===
+        entered.toLowerCase()
+      );
+    }
+  );
 
 
           if (!selected) {
@@ -774,8 +773,8 @@ function(data) {
                 matches[0];
 
 
-              search.value =
-                selected;
+   search.value =
+  displayAsset(selected);
             }
           }
 
@@ -858,11 +857,17 @@ function(data) {
           valid:
             true,
 
-          value:
-            document.getElementById(
-              "assetSearch"
-            ).value ||
-            ""
+value:
+  (
+    assets.find(function(item) {
+      return (
+        displayAsset(item).toLowerCase() ===
+        document.getElementById("assetSearch").value.trim().toLowerCase()
+      );
+    }) ||
+    document.getElementById("assetSearch").value ||
+    ""
+  )
 
         });
       }
