@@ -572,7 +572,30 @@ function(asset) {
 
   ]);
 
+// MANUALS / PDF — separate from Image Upload
 
+let manual = asset.manuals || "";
+
+try {
+  manual = JSON.parse(manual);
+} catch (e) {}
+
+if (Array.isArray(manual)) {
+  manual = manual[0] || "";
+}
+
+const manualUrl =
+  typeof manual === "string" &&
+  /^https:\/\//i.test(manual)
+    ? manual.trim()
+    : "";
+
+JFCustomWidget.setFieldsValueByLabel([
+  {
+    label: "Manuals / PDF's",
+    value: manualUrl
+  }
+]);
   renderChecklist(asset);
 
 
