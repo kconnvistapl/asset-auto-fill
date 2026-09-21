@@ -700,7 +700,9 @@ JFCustomWidget.setFieldsValueByLabel([
 
 
   status.textContent =
-    "Asset information filled.";
+    manualUrl
+  ? "PDF URL received successfully."
+  : "ERROR: PDF URL missing from live data.";
 };
 
 
