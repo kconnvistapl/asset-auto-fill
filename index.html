@@ -600,7 +600,22 @@ JFCustomWidget.setFieldsValueByLabel([
     value: manualUrl
   }
 ]);
+  if (isEditMode) {
+
   renderChecklist(asset);
+
+} else {
+
+  details.style.display = "none";
+
+  document.getElementById(
+    "checklistSection"
+  ).innerHTML = "";
+
+  currentChecklistTasks = [];
+
+  checklistTouched = false;
+}
 
 
   let html =
