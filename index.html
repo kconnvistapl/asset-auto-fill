@@ -870,7 +870,7 @@ let selected =
 
         let checklistComplete = true;
 
-        if (currentChecklistTasks.length) {
+        if (isEditMode && currentChecklistTasks.length) {
 
           for (
             let i = 0;
@@ -919,9 +919,9 @@ let selected =
           return;
         }
 
-        if (currentChecklistTasks.length) {
-
-          saveChecklistResults();
+if (isEditMode && currentChecklistTasks.length) {
+  saveChecklistResults();
+}
         }
 
         JFCustomWidget.sendSubmit({
