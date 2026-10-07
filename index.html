@@ -711,23 +711,41 @@ JFCustomWidget.subscribe(
   "ready",
 function(data) {
 
-  isEditMode =
-    !!(data && String(data.value || "").trim());
+isEditMode = false;
 
-  if (isEditMode) {
-    const savedAsset = String(data.value).trim();
+JFCustomWidget.getFieldsValueById(
+  ["26"],
+  function(result) {
 
-    document.getElementById("assetSearch").value =
-      savedAsset;
+    const workOrderInfo =
+      JSON.stringify(result || "");
 
-    jsonp(
-      {
-        action: "assetDetails",
-        asset: savedAsset
-      },
-      "assetDetailsCallback"
-    );
+    isEditMode =
+      /WO-|LIM-/i.test(workOrderInfo);
+
+    if (
+      isEditMode &&
+      data &&
+      String(data.value || "").trim()
+    ) {
+
+      const savedAsset =
+        String(data.value).trim();
+
+      document.getElementById(
+        "assetSearch"
+      ).value = savedAsset;
+
+      jsonp(
+        {
+          action: "assetDetails",
+          asset: savedAsset
+        },
+        "assetDetailsCallback"
+      );
+    }
   }
+);
 
 
     jsonp(
@@ -921,7 +939,6 @@ let selected =
 
 if (isEditMode && currentChecklistTasks.length) {
   saveChecklistResults();
-}
         }
 
         JFCustomWidget.sendSubmit({
