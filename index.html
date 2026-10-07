@@ -711,41 +711,26 @@ JFCustomWidget.subscribe(
   "ready",
 function(data) {
 
-isEditMode = false;
+isEditMode =
+  !!(data && String(data.value || "").trim());
 
-JFCustomWidget.getFieldsValueById(
-  ["26"],
-  function(result) {
+if (isEditMode) {
 
-    const workOrderInfo =
-      JSON.stringify(result || "");
+  const savedAsset =
+    String(data.value).trim();
 
-    isEditMode =
-      /WO-|LIM-/i.test(workOrderInfo);
+  document.getElementById(
+    "assetSearch"
+  ).value = savedAsset;
 
-    if (
-      isEditMode &&
-      data &&
-      String(data.value || "").trim()
-    ) {
-
-      const savedAsset =
-        String(data.value).trim();
-
-      document.getElementById(
-        "assetSearch"
-      ).value = savedAsset;
-
-      jsonp(
-        {
-          action: "assetDetails",
-          asset: savedAsset
-        },
-        "assetDetailsCallback"
-      );
-    }
-  }
-);
+  jsonp(
+    {
+      action: "assetDetails",
+      asset: savedAsset
+    },
+    "assetDetailsCallback"
+  );
+}
 
 
     jsonp(
