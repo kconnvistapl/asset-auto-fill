@@ -150,7 +150,7 @@ function jsonp(params, callback) {
 
   const script =
     document.createElement("script");
-
+params.v = Date.now();
   params.callback =
     callback;
 
