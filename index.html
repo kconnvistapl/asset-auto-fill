@@ -420,7 +420,16 @@ function(list) {
   assets =
     list ||
     [];
+  const testMatch = assets.find(function(item) {
+    return String(item).indexOf("TEST WO 1007B") !== -1;
+  });
 
+  document.getElementById("status").textContent =
+    "Asset list loaded: " +
+    assets.length +
+    (testMatch
+      ? " | TEST WO 1007B FOUND"
+      : " | TEST WO 1007B NOT FOUND");
 
   const dl =
     document.getElementById(
