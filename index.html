@@ -871,114 +871,99 @@ let selected =
         }
       );
 
-
     JFCustomWidget.subscribe(
       "submit",
       function() {
 
+        let checklistComplete = true;
 
-        if (
-          checklistTouched
-        ) {
+        if (currentChecklistTasks.length) {
+
+          for (
+            let i = 0;
+            i < currentChecklistTasks.length;
+            i++
+          ) {
+
+            const selected =
+              document.querySelector(
+                'input[name="checklist_' +
+                i +
+                '"]:checked'
+              );
+
+            if (!selected) {
+
+              checklistComplete = false;
+
+              break;
+            }
+          }
+        }
+
+        if (!checklistComplete) {
+
+          document.getElementById(
+            "maintenanceDetails"
+          ).style.display =
+            "block";
+
+          document.getElementById(
+            "maintenanceDetails"
+          ).open =
+            true;
+
+          document.getElementById(
+            "status"
+          ).textContent =
+            "Complete all PM checklist items before submitting.";
+
+          JFCustomWidget.sendSubmit({
+            valid: false,
+            value: ""
+          });
+
+          return;
+        }
+
+        if (currentChecklistTasks.length) {
 
           saveChecklistResults();
         }
 
-JFCustomWidget.subscribe(
-  "submit",
-  function() {
+        JFCustomWidget.sendSubmit({
 
-    let checklistComplete = true;
+          valid: true,
 
-    if (currentChecklistTasks.length) {
+          value:
+            (
+              assets.find(function(item) {
 
-      for (
-        let i = 0;
-        i < currentChecklistTasks.length;
-        i++
-      ) {
+                return (
+                  displayAsset(item).toLowerCase() ===
+                  document.getElementById(
+                    "assetSearch"
+                  ).value.trim().toLowerCase()
+                );
 
-        const selected =
-          document.querySelector(
-            'input[name="checklist_' +
-            i +
-            '"]:checked'
-          );
+              }) ||
 
-        if (!selected) {
-
-          checklistComplete = false;
-
-          break;
-        }
-      }
-    }
-
-    if (!checklistComplete) {
-
-      document.getElementById(
-        "maintenanceDetails"
-      ).style.display =
-        "block";
-
-      document.getElementById(
-        "maintenanceDetails"
-      ).open =
-        true;
-
-      document.getElementById(
-        "status"
-      ).textContent =
-        "Complete all PM checklist items before submitting.";
-
-      JFCustomWidget.sendSubmit({
-        valid: false,
-        value: ""
-      });
-
-      return;
-    }
-
-    if (currentChecklistTasks.length) {
-
-      saveChecklistResults();
-    }
-
-    document.getElementById(
-      "status"
-    ).textContent =
-      "Populated";
-
-    JFCustomWidget.sendSubmit({
-
-      valid:
-        true,
-
-      value:
-        (
-          assets.find(function(item) {
-
-            return (
-              displayAsset(item).toLowerCase() ===
               document.getElementById(
                 "assetSearch"
-              ).value.trim().toLowerCase()
-            );
+              ).value ||
 
-          }) ||
+              ""
+            )
 
-          document.getElementById(
-            "assetSearch"
-          ).value ||
+        });
+      }
+    );
 
-          ""
-        )
-
-    });
   }
 );
-    
+
 </script>
 
 </body>
 </html>
+    
