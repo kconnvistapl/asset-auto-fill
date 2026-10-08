@@ -411,7 +411,36 @@ JFCustomWidget.subscribe(
           : ""
       );
 
-JFCustomWidget.getFieldsValueById(["input_8", "input_63"], function(result) {
+function loadPmTasks() {
+
+ function loadPmTasks() {
+
+  JFCustomWidget.getFieldsValueById(
+    ["8", "63"],
+    function(result) {
+
+      const description =
+        fieldValue(result, "8");
+
+      frequency =
+        fieldValue(result, "63");
+
+      tasks =
+        String(description || "")
+          .split(/\r?\n/)
+          .map(cleanTask)
+          .filter(Boolean);
+
+      render();
+    }
+  );
+}
+
+loadPmTasks();
+setTimeout(loadPmTasks, 500);
+setTimeout(loadPmTasks, 1500);
+setTimeout(loadPmTasks, 3000);
+}
 
         const description =
           fieldValue(
@@ -512,6 +541,8 @@ JFCustomWidget.getFieldsValueById(["input_8", "input_63"], function(result) {
 );
 
 </script>
+
+
 
 </body>
 </html>
