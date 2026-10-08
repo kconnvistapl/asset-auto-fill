@@ -411,61 +411,53 @@ JFCustomWidget.subscribe(
           : ""
       );
 
-function loadPmTasks() {
+    function loadPmTasks() {
 
- function loadPmTasks() {
+      JFCustomWidget.getFieldsValueById(
+        ["8", "63"],
+        function(result) {
 
-  JFCustomWidget.getFieldsValueById(
-    ["8", "63"],
-    function(result) {
+          const description =
+            fieldValue(
+              result,
+              "8"
+            );
 
-      const description =
-        fieldValue(result, "8");
+          frequency =
+            fieldValue(
+              result,
+              "63"
+            );
 
-      frequency =
-        fieldValue(result, "63");
+          tasks =
+            String(
+              description || ""
+            )
+              .split(/\r?\n/)
+              .map(cleanTask)
+              .filter(Boolean);
 
-      tasks =
-        String(description || "")
-          .split(/\r?\n/)
-          .map(cleanTask)
-          .filter(Boolean);
-
-      render();
+          render();
+        }
+      );
     }
-  );
-}
 
-loadPmTasks();
-setTimeout(loadPmTasks, 500);
-setTimeout(loadPmTasks, 1500);
-setTimeout(loadPmTasks, 3000);
-}
+    loadPmTasks();
 
-        const description =
-          fieldValue(
-            result,
-            "8"
-          );
-
-        frequency =
-          fieldValue(
-            result,
-            "63"
-          );
-
-        tasks =
-          String(
-            description || ""
-          )
-            .split(/\r?\n/)
-            .map(cleanTask)
-            .filter(Boolean);
-
-        render();
-      }
+    setTimeout(
+      loadPmTasks,
+      500
     );
 
+    setTimeout(
+      loadPmTasks,
+      1500
+    );
+
+    setTimeout(
+      loadPmTasks,
+      3000
+    );
 
     JFCustomWidget.subscribe(
       "submit",
@@ -541,8 +533,6 @@ setTimeout(loadPmTasks, 3000);
 );
 
 </script>
-
-
 
 </body>
 </html>
