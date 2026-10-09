@@ -14,18 +14,18 @@
   }
 
   .task {
-    padding: 10px 0;
+    padding: 12px 0;
     border-bottom: 1px solid #ddd;
   }
 
   .task-text {
     font-weight: 600;
-    margin-bottom: 7px;
+    margin-bottom: 8px;
   }
 
   .options {
     display: flex;
-    gap: 18px;
+    gap: 20px;
     flex-wrap: wrap;
   }
 
@@ -38,22 +38,23 @@
     margin-right: 5px;
   }
 
+  .note {
+    font-size: 13px;
+    color: #555;
+    padding: 8px 0;
+  }
+
   #status {
     font-size: 12px;
-    margin-top: 8px;
+    margin-top: 10px;
+    color: #555;
   }
 
   #error {
     color: #b00020;
     font-size: 13px;
-    margin-top: 8px;
     font-weight: 600;
-  }
-
-  .note {
-    font-size: 13px;
-    color: #555;
-    padding: 6px 0;
+    margin-top: 10px;
   }
 </style>
 </head>
@@ -67,159 +68,72 @@
 <script>
 
 let tasks = [];
-let frequency = "";
 let savedResults = {};
 
-function cleanTask(text) {
-  return String(text || "")
+function cleanTask(value) {
+  return String(value || "")
     .trim()
     .replace(/^[-•]\s*/, "")
     .replace(/^\d+[.)]\s*/, "")
     .trim();
 }
 
-function parseSaved(value) {
+function loadSavedValue(value) {
 
-  const map = {};
+  const lines =
+    String(value || "")
+      .split(/\r?\n/)
+      .map(function(line) {
+        return line.trim();
+      })
+      .filter(Boolean);
 
-  String(value || "")
-    .split(/\r?\n/)
-    .forEach(function(line) {
+  tasks = [];
+  savedResults = {};
 
-      const match =
-        line.match(
-          /^(PASS|FAIL|N\/A)\s+-\s+(.*)$/i
-        );
+  lines.forEach(function(line) {
 
-      if (match) {
-        map[match[2].trim()] =
-          match[1].toUpperCase();
-      }
+    const match =
+      line.match(
+        /^(PASS|FAIL|N\/A|NOT ANSWERED)\s*-\s*(.+)$/i
+      );
 
-    });
+    if (match) {
 
-  return map;
-}
+      const result =
+        match[1].toUpperCase();
 
-function fieldValue(result, qid) {
+      const task =
+        cleanTask(match[2]);
 
-  const containers = [
-    result,
-    result && result.data
-  ];
+      if (task) {
 
-  const candidates = [
-    qid,
-    "input_" + qid,
-    "q" + qid
-  ];
-
-  function unwrap(value) {
-
-    if (
-      value === null ||
-      value === undefined
-    ) {
-      return "";
-    }
-
-    if (
-      typeof value === "string" ||
-      typeof value === "number"
-    ) {
-      return String(value);
-    }
-
-    if (typeof value === "object") {
-
-      if (value.value !== undefined) {
-        return unwrap(value.value);
-      }
-
-      if (value.answer !== undefined) {
-        return unwrap(value.answer);
-      }
-    }
-
-    return "";
-  }
-
-  for (
-    let i = 0;
-    i < containers.length;
-    i++
-  ) {
-
-    const container =
-      containers[i];
-
-    if (!container) continue;
-
-    if (Array.isArray(container)) {
-
-      for (
-        let j = 0;
-        j < container.length;
-        j++
-      ) {
-
-        const item =
-          container[j] || {};
-
-        const id =
-          String(
-            item.id ||
-            item.qid ||
-            item.name ||
-            item.input ||
-            ""
-          );
+        tasks.push(task);
 
         if (
-          id === qid ||
-          id === "input_" + qid ||
-          id === "q" + qid
+          result !==
+          "NOT ANSWERED"
         ) {
-
-          const found =
-            unwrap(item);
-
-          if (found !== "") {
-            return found;
-          }
+          savedResults[task] =
+            result;
         }
       }
 
     } else {
 
-      for (
-        let k = 0;
-        k < candidates.length;
-        k++
-      ) {
+      const task =
+        cleanTask(line);
 
-        const key =
-          candidates[k];
-
-        if (
-          Object.prototype.hasOwnProperty.call(
-            container,
-            key
-          )
-        ) {
-
-          const found =
-            unwrap(container[key]);
-
-          if (found !== "") {
-            return found;
-          }
-        }
+      if (task) {
+        tasks.push(task);
       }
     }
-  }
+  });
 
-  return "";
+  tasks =
+    tasks.filter(function(task, index) {
+      return tasks.indexOf(task) === index;
+    });
 }
 
 function resultText() {
@@ -241,7 +155,6 @@ function resultText() {
       ) +
       " - " +
       task;
-
     })
     .join("\n");
 }
@@ -263,33 +176,14 @@ function render() {
       "error"
     );
 
-  error.textContent = "";
   checklist.innerHTML = "";
-
-  if (
-    frequency
-      .trim()
-      .toLowerCase() ===
-    "immediate wo"
-  ) {
-
-    tasks = [];
-
-    checklist.innerHTML =
-      '<div class="note">' +
-      'PM checklist not required for Immediate WO.' +
-      '</div>';
-
-    status.textContent = "";
-
-    return;
-  }
+  error.textContent = "";
 
   if (!tasks.length) {
 
     checklist.innerHTML =
       '<div class="note">' +
-      'No PM tasks found in Description of Work Needed.' +
+      'No PM checklist required for this work order.' +
       '</div>';
 
     status.textContent = "";
@@ -305,8 +199,7 @@ function render() {
           "div"
         );
 
-      row.className =
-        "task";
+      row.className = "task";
 
       const text =
         document.createElement(
@@ -319,9 +212,7 @@ function render() {
       text.textContent =
         task;
 
-      row.appendChild(
-        text
-      );
+      row.appendChild(text);
 
       const options =
         document.createElement(
@@ -348,27 +239,32 @@ function render() {
               "input"
             );
 
-          input.type =
-            "radio";
-
+          input.type = "radio";
           input.name =
             "pm_" + index;
-
-          input.value =
-            value;
+          input.value = value;
 
           if (
             savedResults[task] ===
             value
           ) {
-
-            input.checked =
-              true;
+            input.checked = true;
           }
 
-          label.appendChild(
-            input
+          input.addEventListener(
+            "change",
+            function() {
+
+              error.textContent = "";
+
+              JFCustomWidget.sendData({
+                valid: true,
+                value: resultText()
+              });
+            }
           );
+
+          label.appendChild(input);
 
           label.appendChild(
             document.createTextNode(
@@ -380,19 +276,13 @@ function render() {
             )
           );
 
-          options.appendChild(
-            label
-          );
+          options.appendChild(label);
         }
       );
 
-      row.appendChild(
-        options
-      );
+      row.appendChild(options);
 
-      checklist.appendChild(
-        row
-      );
+      checklist.appendChild(row);
     }
   );
 
@@ -404,90 +294,22 @@ JFCustomWidget.subscribe(
   "ready",
   function(data) {
 
-    savedResults =
-      parseSaved(
-        data && data.value
-          ? data.value
-          : ""
-      );
-
-    function loadPmTasks() {
-
-      JFCustomWidget.getFieldsValueById(
-        ["8", "63"],
-        function(result) {
-
-          const description =
-            fieldValue(
-              result,
-              "8"
-            );
-
-          frequency =
-            fieldValue(
-              result,
-              "63"
-            );
-
-          tasks =
-            String(
-              description || ""
-            )
-              .split(/\r?\n/)
-              .map(cleanTask)
-              .filter(Boolean);
-
-          render();
-        }
-      );
-    }
-
-    loadPmTasks();
-
-    setTimeout(
-      loadPmTasks,
-      500
+    loadSavedValue(
+      data && data.value
+        ? data.value
+        : ""
     );
 
-    setTimeout(
-      loadPmTasks,
-      1500
-    );
-
-    setTimeout(
-      loadPmTasks,
-      3000
-    );
+    render();
 
     JFCustomWidget.subscribe(
       "submit",
       function() {
 
-        const isImmediate =
-          frequency
-            .trim()
-            .toLowerCase() ===
-          "immediate wo";
-
-        if (isImmediate) {
+        if (!tasks.length) {
 
           JFCustomWidget.sendSubmit({
             valid: true,
-            value: ""
-          });
-
-          return;
-        }
-
-        if (!tasks.length) {
-
-          document.getElementById(
-            "error"
-          ).textContent =
-            "No PM tasks were found.";
-
-          JFCustomWidget.sendSubmit({
-            valid: false,
             value: ""
           });
 
@@ -516,7 +338,7 @@ JFCustomWidget.subscribe(
 
             JFCustomWidget.sendSubmit({
               valid: false,
-              value: ""
+              value: resultText()
             });
 
             return;
