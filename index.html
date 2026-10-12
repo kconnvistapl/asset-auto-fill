@@ -129,23 +129,23 @@
 const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
+
 function displayAsset(item) {
   const parts = String(item || "").split(" — ");
 
-  if (parts.length >= 2) {
-    const assetId = parts.shift();
-    const name = parts.join(" — ");
-    return name + " — " + assetId;
-  }
+  if (parts.length < 3) return item;
 
-  return item;
+  const id = parts[0];
+  const name = parts[1];
+  const dc = parts[2];
+  const sid = parts.find(p => p.startsWith("SID:"));
+
+  return (
+    name + " — " + dc + " — " + id +
+    (sid ? " — " + sid : "")
+  );
 }
 
-let currentChecklistTasks = [];
-
-let checklistTouched = false;
-
-  let isEditMode = false;
   
 
 function jsonp(params, callback) {
