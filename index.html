@@ -137,6 +137,14 @@ const API =
 "https://script.google.com/macros/s/AKfycbwAitSILQYvKP-YgSvCUj8bIWel_07hIO7b8PGj9qo-DW6eRzOGVRVDy8w8rzZEbOEg8w/exec";
 
 
+// Initialize state before Jotform callbacks run.
+let assets = [];
+let currentChecklistTasks = [];
+let checklistTouched = false;
+let isEditMode = false;
+let savedAssetValue = "";
+let lastPopulatedAssetSelection = "";
+
 function displayAsset(item) {
   const parts = String(item || "").split(" — ");
 
@@ -152,8 +160,6 @@ function displayAsset(item) {
     (sid ? " — " + sid : "")
   );
 }
-
-  
 
 function jsonp(params, callback) {
 
@@ -725,6 +731,7 @@ JFCustomWidget.setFieldsValueByLabel([
     html;
 
 
+lastPopulatedAssetSelection = document.getElementById("assetSearch").value.trim();
 status.textContent = "Populated";
 };
 
@@ -740,6 +747,8 @@ if (isEditMode) {
 
   const savedAsset =
     String(data.value).trim();
+
+  savedAssetValue = savedAsset;
 
   document.getElementById(
     "assetSearch"
@@ -837,10 +846,16 @@ let selected =
             ).textContent =
               "Select an asset from the list.";
 
-
             return;
           }
 
+          // Already loaded on this existing work order: keep photo preview.
+          if (isEditMode && selected === savedAssetValue) {
+            document.getElementById("status").textContent = "Populated";
+            return;
+          }
+
+          lastPopulatedAssetSelection = "";
 
           document.getElementById(
             "status"
@@ -892,86 +907,26 @@ let selected =
     JFCustomWidget.subscribe(
       "submit",
       function() {
+        // The separate PM Checklist widget enforces PASS/FAIL/N/A.
+        // This widget checks that the work order keeps a real asset assignment.
+        const entered = document.getElementById("assetSearch").value.trim();
+        const selected = assets.find(function(item) {
+          return displayAsset(item).toLowerCase() === entered.toLowerCase();
+        });
+        const unchangedExisting = isEditMode && entered === savedAssetValue;
+        const notAssigned = /^Not Assigned(?:\s*[—-]\s*.*)?$/i.test(entered);
+        const populated = Boolean(selected && entered === lastPopulatedAssetSelection);
 
-        let checklistComplete = true;
-
-        if (isEditMode && currentChecklistTasks.length) {
-
-          for (
-            let i = 0;
-            i < currentChecklistTasks.length;
-            i++
-          ) {
-
-            const selected =
-              document.querySelector(
-                'input[name="checklist_' +
-                i +
-                '"]:checked'
-              );
-
-            if (!selected) {
-
-              checklistComplete = false;
-
-              break;
-            }
-          }
-        }
-
-        if (!checklistComplete) {
-
-          document.getElementById(
-            "maintenanceDetails"
-          ).style.display =
-            "block";
-
-          document.getElementById(
-            "maintenanceDetails"
-          ).open =
-            true;
-
-          document.getElementById(
-            "status"
-          ).textContent =
-            "Complete all PM checklist items before submitting.";
-
-          JFCustomWidget.sendSubmit({
-            valid: false,
-            value: ""
-          });
-
+        if (!unchangedExisting && !populated && !notAssigned) {
+          document.getElementById("status").textContent =
+            "Select an asset and click Auto Fill, or choose Not Assigned.";
+          JFCustomWidget.sendSubmit({ valid: false, value: "" });
           return;
         }
 
-if (isEditMode && currentChecklistTasks.length) {
-  saveChecklistResults();
-        }
-
         JFCustomWidget.sendSubmit({
-
           valid: true,
-
-          value:
-            (
-              assets.find(function(item) {
-
-                return (
-                  displayAsset(item).toLowerCase() ===
-                  document.getElementById(
-                    "assetSearch"
-                  ).value.trim().toLowerCase()
-                );
-
-              }) ||
-
-              document.getElementById(
-                "assetSearch"
-              ).value ||
-
-              ""
-            )
-
+          value: unchangedExisting ? savedAssetValue : (selected || entered)
         });
       }
     );
